@@ -1,0 +1,1 @@
+export const emptyForm = { kind: 'sale', number: '', date: new Date().toISOString().slice(0, 10), party: '', gstin: '', state: 'Maharashtra', description: '', hsn: '', quantity: 1, unit_price: '', amount: '', rate: 18 };

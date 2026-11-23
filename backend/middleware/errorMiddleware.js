@@ -1,0 +1,2 @@
+export function notFound(req,res){res.status(404).json({error:'API route not found.'});}
+export function errorHandler(error,req,res,next){if(res.headersSent)return next(error);if(error.code===11000)return res.status(409).json({error:'That invoice number or email is already in use.'});if(error.name==='MulterError')return res.status(400).json({error:error.code==='LIMIT_FILE_SIZE'?'File is too large. Maximum size is 10 MB.':error.message});console.error(error);return res.status(error.status||500).json({error:error.status?error.message:'The request could not be completed.'});}

@@ -1,0 +1,13 @@
+{
+  "name": "smartgst",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node backend/dev.js",
+    "build": "npm --prefix frontend run build",
+    "start:api": "npm --prefix backend run start",
+    "install:all": "npm install --prefix frontend && npm install --prefix backend",
+    "test": "npm --prefix backend test"
+  }
+}

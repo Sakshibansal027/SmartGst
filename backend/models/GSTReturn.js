@@ -1,0 +1,1 @@
+export function totals(rows){const sum=key=>Math.round(rows.reduce((v,x)=>v+Number(x[key]||0),0)*100)/100;return{count:rows.length,taxable:sum('amount'),cgst:sum('cgst'),sgst:sum('sgst'),igst:sum('igst')};}
