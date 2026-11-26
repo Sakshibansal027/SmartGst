@@ -1,61 +1,337 @@
 # SmartGST — Automated GST Compliance Assistant
 
-A responsive prototype for Indian small businesses to record invoices, calculate GST under explicit demo assumptions, review rule-based validation, track sample compliance reminders, and prepare return summaries.
+SmartGST is a responsive prototype designed to help Indian small businesses manage their invoices, calculate GST, review transaction errors, track compliance reminders, and prepare GST return summaries.
 
-## Project layout
+It combines invoice management, GST calculations, rule-based validation, compliance tracking, and optional AI-powered receipt extraction in one application.
 
-- `frontend/` — React, Vite, Tailwind CSS, React Router, Recharts, and Lucide React.
-- `backend/` — Express API, MongoDB persistence and session store, invoice/GST/report logic, optional Gemini receipt OCR, and PDF generation.
-- The old `backend/smartgst.db` SQLite file is retained as a migration source when present; it is not the active database. Legacy invoices/tasks are copied into MongoDB once, without deleting that file.
+## Project Overview
+
+SmartGST helps small business owners simplify everyday GST-related activities through an easy-to-use interface.
+
+The application supports:
+- Recording and managing sales and purchase invoices.
+- Calculating GST using configurable demo tax rates.
+- Identifying potential invoice errors through rule-based validation.
+- Tracking sample GST compliance reminders.
+- Preparing GST return summaries and downloadable reports.
+- Extracting receipt information using Google Gemini Vision.
+
+## Tech Stack
+
+### Frontend
+- React
+- Vite
+- Tailwind CSS
+- React Router
+- Recharts
+- Lucide React
+
+### Backend
+- Node.js
+- Express.js
+- MongoDB
+- MongoDB-backed HTTP sessions
+- PDFKit
+- Google Gemini API (optional receipt OCR)
+
+## Project Structure
+
+```text
+SmartGST/
+├── frontend/
+│   ├── src/
+│   ├── pages/
+│   └── ...
+├── backend/
+│   ├── config/
+│   ├── controllers/
+│   ├── middleware/
+│   ├── tests/
+│   └── ...
+├── .env.example
+├── README.md
+└── ...
+```
+
+The backend uses MongoDB for active application data and session storage.
+
+The old `backend/smartgst.db` SQLite file is retained as a migration source when present. Legacy invoices and tasks are copied into MongoDB once, without deleting the original SQLite file.
 
 ## Features
 
-- Registration and login with bcrypt password hashing and MongoDB-backed HTTP sessions; protected data APIs are tenant scoped.
-- Invoice CRUD, search, sales/purchase filtering, printable details, validation, and dynamic dashboard totals.
-- FY-filtered dashboard, invoice listing, GST return summaries, and CSV/PDF reports.
-- Deterministic intra-state CGST/SGST and inter-state IGST calculations with configurable demo rates.
-- Compliance reminders and calendar completion/custom tasks.
-- English/Hindi translation dictionaries cover the primary navigation, dashboard, invoice forms and tables, GST tools, calendar, reports, profile, settings, login, and help screens. A few backend and dynamic validation messages may remain English.
-- Receipt uploads sent to the backend for optional Google Gemini Vision extraction. PDFs are read natively by Gemini, so no Poppler install is needed. OCR is honestly unavailable until `GEMINI_API_KEY` is set; the manual entry form remains available.
-- Genuine PDFKit-generated prototype report and GSTR-1/GSTR-3B PDF downloads.
+### 1. Authentication and User Management
+- Business registration and login.
+- Password hashing using bcrypt.
+- MongoDB-backed HTTP sessions.
+- Protected APIs with tenant-scoped data access.
+- No hardcoded demo credentials or passwordless login.
 
-Receipt extraction calls the Google Gemini API (free tier). No other AI, ML, LLM, or cloud AI service is used.
+### 2. Invoice Management
+- Create, view, update, and delete invoices.
+- Search and filter sales and purchase invoices.
+- Printable invoice details.
+- Invoice validation and duplicate detection.
+- Dynamic dashboard totals.
 
-## Requirements and setup
+### 3. GST Calculation
+- Intra-state transactions use CGST and SGST.
+- Inter-state transactions use IGST.
+- Configurable demonstration tax rates.
+- Tax calculations based on explicit demo assumptions.
+
+### 4. Dashboard and Reports
+- Financial-year-filtered dashboard.
+- Invoice listing and transaction summaries.
+- GST return summaries.
+- CSV and PDF report generation.
+- GSTR-1 and GSTR-3B prototype PDF downloads.
+
+### 5. Compliance Calendar
+- Sample GST compliance reminders.
+- Calendar-based task tracking.
+- Mark reminders as completed.
+- Create custom compliance tasks.
+
+### 6. Receipt OCR using Gemini Vision
+- Upload receipt images and PDF documents.
+- Extract receipt information using Google Gemini Vision.
+- Native PDF processing without requiring Poppler.
+- Server-side validation of extracted fields.
+- Manual invoice entry remains available if OCR is unavailable.
+
+### 7. Multilingual Interface
+- English and Hindi translation support.
+- Translations for primary navigation, dashboard, invoice forms, GST tools, calendar, reports, profile, settings, login, and help screens.
+- Some backend-generated and dynamic validation messages may remain in English.
+
+## Requirements
+
+Before running the project, ensure you have:
 
 - Node.js 22 or newer.
-- MongoDB Atlas or a reachable MongoDB server.
-- Optional: a Google Gemini API key for receipt extraction. The free tier is sufficient; no billing account is required.
+- MongoDB Atlas account or a reachable MongoDB server.
+- npm.
+- Google Gemini API key (optional, required only for receipt OCR).
 
-1. Copy `.env.example` to the project root `.env`.
-2. Set `MONGODB_URI` to the full connection string copied from Atlas **Connect → Drivers**. Replace all placeholders, URL-encode special characters in the database password, and allow your current IP in Atlas Network Access. Set `MONGODB_DATABASE=smartgst`.
-3. Install dependencies with `npm run install:all` (or `npm install` in `frontend` and `backend` separately).
-4. Run `npm run dev` from either the project root or the `frontend/` directory. Both commands start the API and Vite together.
-5. Open the Vite `Local` URL printed in the terminal. Vite can select a port other than 5173 when that port is occupied. The API defaults to 5000 and the launcher searches a free nearby port if needed; set `SMARTGST_API_PORT` explicitly to keep the Vite proxy aligned.
+## Installation and Setup
 
-To run only the API separately, use `npm run start --prefix backend`; the frontend development command intentionally starts both services to keep its API proxy aligned. Build the frontend with `npm run build` from the root.
+### 1. Clone the Repository
 
-## Receipt OCR setup (optional)
+```bash
+git clone https://github.com/Sakshibansal027/SmartGst.git
+cd SmartGst
+```
 
-Receipt extraction uses the Google Gemini API. Create a free key at <https://aistudio.google.com/apikey>, set `GEMINI_API_KEY` in `.env`, and restart the API. `GEMINI_MODEL` defaults to `gemini-2.5-flash`; any vision-capable Gemini model on your tier works. No local binaries are needed — Gemini reads JPEG, PNG, WEBP and PDF directly, so Poppler is no longer required.
+### 2. Configure Environment Variables
 
-The free tier is rate limited (requests per minute and per day). When the quota is reached the upload endpoint returns a `429` saying so, and the manual entry form still works. Check the current limits for your model in Google AI Studio before relying on this in a demo. With no key set, the upload endpoint reports a clear configuration error; it never fakes extracted data.
+Copy the example environment file:
 
-## Authentication and demo data
+```bash
+copy .env.example .env
+```
 
-There are no hardcoded demo credentials or passwordless login. Create an account using **Register your business**. A new account receives sample invoice/reminder records for demonstrating dashboard and report flows. Sessions are stored in MongoDB. Set `SESSION_SECRET` to a long random value for deployments; when omitted, a random persistent key is stored in MongoDB for this prototype.
+Open the root `.env` file and configure the required variables.
 
-## Prototype limitations
+Set your MongoDB connection details:
 
-- Sample records and due dates are illustrative, not official GST filing deadlines or business records.
-- GST formulas use same-state vs different-state demo assumptions. Correct tax treatment depends on supply type, place of supply, exemptions, notifications, registration, and current law. Verify before using for compliance.
-- Return downloads are prototype PDFs, not official GST forms, filing submissions, or portal integration.
-- Receipt OCR sends the uploaded file to Google's Gemini API, so receipts leave this machine and are subject to Google's free-tier terms and rate limits. Extracted fields are model suggestions, re-validated on the server, and still require human review; scanned or low-quality documents may not extract correctly.
-- Authentication has no email verification, password reset, rate limiting, or production-grade threat protection. It is a functional prototype, not production-secure.
-- MongoDB Atlas credentials are never included in this repository. Keep `.env` private and rotate any database password that was previously pasted into chat or logs.
+```env
+MONGODB_URI=your_mongodb_connection_string
+MONGODB_DATABASE=smartgst
+```
+
+For MongoDB Atlas:
+1. Open MongoDB Atlas.
+2. Navigate to Connect → Drivers.
+3. Copy the connection string.
+4. Replace the placeholders with your database credentials.
+5. URL-encode special characters in your database password.
+6. Allow your current IP address under Network Access.
+
+Keep your actual `.env` file private. Never commit API keys or database credentials to GitHub.
+
+### 3. Install Dependencies
+
+From the project root:
+
+```bash
+npm run install:all
+```
+
+Alternatively, install dependencies separately:
+
+```bash
+cd frontend
+npm install
+```
+
+```bash
+cd ../backend
+npm install
+```
+
+### 4. Run the Application
+
+You can start the development environment from the project root:
+
+```bash
+npm run dev
+```
+
+Alternatively, run the development command from the `frontend/` directory:
+
+```bash
+npm run dev
+```
+
+The development launcher starts the Express API and Vite frontend together.
+
+Open the local Vite URL displayed in the terminal.
+
+**Note:**
+- Vite uses port 5173 by default.
+- If the port is occupied, Vite automatically selects another available port.
+- The API defaults to port 5000 and the launcher searches nearby available ports when necessary.
+- Set `SMARTGST_API_PORT` explicitly when you need a fixed API port aligned with the Vite proxy.
+
+### 5. Run Only the Backend
+
+To start only the API:
+
+```bash
+npm run start --prefix backend
+```
+
+## Receipt OCR Setup (Optional)
+
+SmartGST uses the Google Gemini API for receipt extraction.
+
+### 1. Generate a Gemini API Key
+
+Create a free API key using Google AI Studio:
+
+https://aistudio.google.com/apikey
+
+### 2. Configure the API Key
+
+Add the following to your root `.env` file:
+
+```env
+GEMINI_API_KEY=your_gemini_api_key
+```
+
+The default model is:
+
+```env
+GEMINI_MODEL=gemini-2.5-flash
+GEMINI_API_VERSION=v1beta
+```
+
+The configured model must support vision input.
+
+### 3. Restart the Backend
+
+Restart the development server after configuring the key.
+
+**Important OCR Notes:**
+- Receipt extraction uses the Google Gemini API free tier.
+- No billing-enabled paid fallback is configured.
+- Gemini supports JPEG, PNG, WEBP, and PDF input.
+- PDFs are processed directly without requiring Poppler.
+- OCR is unavailable until `GEMINI_API_KEY` is configured.
+- Free-tier requests are subject to Google's rate limits.
+- When the quota is reached, the upload endpoint returns HTTP 429.
+- Manual invoice entry remains available even when OCR is unavailable.
+
+Check the current model-specific quota limits in Google AI Studio before relying on OCR during a demonstration.
+
+## Authentication and Demo Data
+
+SmartGST does not provide hardcoded demo credentials or passwordless login.
+
+To use the application:
+
+1. Open the application.
+2. Select **Register your business**.
+3. Create an account.
+4. Log in using your registered credentials.
+
+New accounts receive sample invoice and reminder records to demonstrate dashboard, invoice, and reporting functionality.
+
+Sessions are stored in MongoDB.
+
+For deployments, configure `SESSION_SECRET` with a long random value. If it is omitted, the prototype stores a randomly generated persistent key in MongoDB.
+
+## Testing and Verification
+
+### Backend Tests
+
+Run the backend test suite:
+
+```bash
+cd backend
+npm test
+```
+
+The tests cover:
+- Intra-state and inter-state GST calculations.
+- Financial-year date selection.
+- Invoice validation.
+- Receipt field extraction and normalization.
+- Gemini API response handling.
+- Free-tier quota error handling.
+- Invalid API key handling.
+- Upload validation and multipart field contracts.
+
+These deterministic tests do not require a database connection, Gemini API key, or network access.
+
+### Frontend Production Build
+
+Run the following commands from the `frontend/` directory:
+
+```bash
+cd frontend
+npm run build
+```
+
+This generates the production build inside the `frontend/dist/` directory.
+
+End-to-end API verification requires a reachable MongoDB URI configured locally.
+
+## Privacy and Security
+
+- MongoDB credentials and Gemini API keys must remain in the private `.env` file.
+- Environment example files contain placeholders only.
+- Passwords are hashed using bcrypt.
+- Protected application APIs use authenticated sessions and tenant-scoped data access.
+- Receipt uploads are sent to Google's Gemini API for OCR processing.
+- Extracted information is validated by the backend before being returned.
+
+Uploaded receipts may contain sensitive business information. Users should review Google's applicable API terms and privacy practices before uploading real business documents.
+
+## Prototype Limitations
+
+SmartGST is a functional prototype and is not a production-ready GST filing platform.
+
+- Sample records and due dates are illustrative, not official GST filing deadlines or actual business records.
+- GST calculations use same-state versus different-state demonstration assumptions. Actual tax treatment depends on supply type, place of supply, exemptions, notifications, registration, and current law.
+- GST calculations and return summaries should be verified before being used for actual compliance.
+- Downloadable return PDFs are prototype documents, not official GST forms or filing submissions.
+- There is no direct GST portal integration.
+- OCR output is a model-generated suggestion and requires human verification.
+- Scanned, unclear, or low-quality documents may not be extracted correctly.
+- Authentication does not currently include email verification, password reset, rate limiting, or production-grade threat protection.
 - Some server-generated validation and connection error messages remain in English.
 
-## Verification
+## Future Improvements
 
-`npm run build` compiles the frontend. `npm test` runs deterministic GST, financial-year, invoice-validation, receipt-field and upload-contract tests — none of them need a database, an API key, or network access. End-to-end API verification requires a reachable MongoDB URI configured locally.
+Potential improvements include:
+- Direct GST portal integration.
+- More comprehensive GST rule validation.
+- Improved receipt extraction and error detection.
+- Advanced analytics and business insights.
+- Stronger authentication and production security.
+- Expanded Hindi and multilingual coverage.
 
+## License
+
+This project is developed as a prototype for educational and demonstration purposes.
