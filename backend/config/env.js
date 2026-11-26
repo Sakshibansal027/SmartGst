@@ -15,8 +15,8 @@ export const config = {
   sessionCookieName: 'smartgst.sid',
   sessionMaxAgeMs: 1000 * 60 * 60 * 12,
   uploadDir: path.join(backendDir,'uploads'),
-  tesseractPath: process.env.TESSERACT_PATH || '',
-  tesseractLanguage: process.env.TESSERACT_LANGUAGE || 'eng',
-  pdftoppmPath: process.env.PDFTOPPM_PATH || 'pdftoppm',
+  geminiApiKey: process.env.GEMINI_API_KEY || '',
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+  geminiApiVersion: process.env.GEMINI_API_VERSION || 'v1beta',
   isProduction: process.env.NODE_ENV === 'production'
 };

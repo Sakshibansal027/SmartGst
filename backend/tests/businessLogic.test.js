@@ -37,7 +37,16 @@ test('invoice validation reports duplicates and required fields deterministicall
 
 test('receipt text extraction normalizes Indian numeric dates and amounts for review forms', () => {
   assert.deepEqual(extractReceiptFields('Invoice No: R-17\nDate: 24/11/2026\nTaxable value: ₹ 12,450.00'), {
-    number: 'R-17', date: '2026-11-24', gstin: '', hsn: '', amount: '12450.00'
+    number: 'R-17', date: '2026-11-24', gstin: '', hsn: '', amount: '12450.00', party: '', state: ''
   });
   assert.equal(extractReceiptFields('Date: 31/02/2026').date, '');
+});
+
+test('receipt text extraction suggests supplier and place of supply when present', () => {
+  const printed = extractReceiptFields('Supplier: Shree Wholesale Mart\nGSTIN: 27AADFS1245K1ZQ\nDate: 03/07/2026');
+  assert.equal(printed.party, 'Shree Wholesale Mart');
+  assert.equal(printed.state, 'Maharashtra');
+  assert.equal(extractReceiptFields('State: Karnataka\nSeller: Coastal Foods Supply').state, 'Karnataka');
+  assert.equal(extractReceiptFields('GSTIN: 99INVALID').state, '');
+  assert.equal(extractReceiptFields('No supplier line here').party, '');
 });
