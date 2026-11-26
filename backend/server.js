@@ -31,7 +31,7 @@ app.use(session({
   store:new MongoSessionStore({maxAge:config.sessionMaxAgeMs}),
   cookie:{httpOnly:true,sameSite:'lax',secure:config.isProduction,maxAge:config.sessionMaxAgeMs,path:'/'}
 }));
-app.get('/api/health',(req,res)=>res.json({ok:true,database:config.mongoDatabase,ocrConfigured:Boolean(config.tesseractPath)}));
+app.get('/api/health',(req,res)=>res.json({ok:true,database:config.mongoDatabase,ocrConfigured:Boolean(config.geminiApiKey)}));
 app.use('/api/auth',authRoutes);
 app.use('/api',requireAuth);
 app.use('/api/invoices',invoiceRoutes);
