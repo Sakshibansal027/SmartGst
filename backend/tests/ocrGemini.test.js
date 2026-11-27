@@ -7,11 +7,15 @@ import { normalizeFields, recognizeReceipt, ocrStatus } from '../config/ocr.js';
 
 // Every test here runs offline: the Gemini call is injected, so no API key and
 // no network access are needed to prove the request shape and error mapping.
-async function tempReceipt(bytes = Buffer.from('fake-receipt-bytes'), mimetype = 'image/png') {
+// Real PNG signature: recognizeReceipt now verifies the bytes rather than
+// trusting the declared Content-Type, so fixtures must be recognisable files.
+const PNG_HEADER = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const asPng = payload => Buffer.concat([PNG_HEADER, Buffer.from(payload)]);
+async function tempReceipt(bytes = asPng('fake-receipt-bytes'), mimetype = 'image/png') {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'smartgst-ocr-'));
   const file = path.join(dir, 'receipt.png');
   await fs.writeFile(file, bytes);
-  return { path: file, mimetype, cleanup: () => fs.rm(dir, { recursive: true, force: true }) };
+  return { path: file, mimetype, bytes, cleanup: () => fs.rm(dir, { recursive: true, force: true }) };
 }
 
 test('normalizeFields validates model output instead of trusting it', () => {
@@ -50,7 +54,7 @@ test('a JSON answer from Gemini is normalized into form fields', async t => {
   assert.match(result.engine, /Gemini/);
   assert.equal(sent[0].mimeType, 'image/png');
   assert.equal(sent[0].model, 'test-model');
-  assert.equal(sent[0].data, Buffer.from('fake-receipt-bytes').toString('base64'));
+  assert.equal(sent[0].data, file.bytes.toString('base64'));
 });
 
 test('a prose answer falls back to the pattern extractor', async t => {
@@ -161,6 +165,23 @@ test('a genuine bad-input rejection still reaches the user as 422', async t => {
     () => recognizeReceipt(file, { apiKey: 'k', generate: async () => { throw Object.assign(new Error(JSON.stringify({ error: { code: 400, message: 'Unsupported MIME type.', status: 'INVALID_ARGUMENT' } })), { status: 400 }); } }),
     error => error.status === 422 && /Unsupported MIME type/.test(error.message)
   );
+});
+
+test('a file whose bytes are not really an image is refused before any request', async t => {
+  // Declared as a PNG but containing plain text, which is what a renamed
+  // executable or a mislabelled upload looks like on the wire.
+  const liar = await tempReceipt(Buffer.from('this is not an image'), 'image/png');
+  t.after(liar.cleanup);
+  let called = false;
+  await assert.rejects(
+    () => recognizeReceipt(liar, { apiKey: 'k', generate: async () => { called = true; return '{}'; } }),
+    error => {
+      assert.equal(error.status, 400);
+      assert.match(error.message, /not a genuine/);
+      return true;
+    }
+  );
+  assert.equal(called, false, 'the provider must never be called for a file that is not an image');
 });
 
 test('ocrStatus reports the API version without exposing the key', () => {

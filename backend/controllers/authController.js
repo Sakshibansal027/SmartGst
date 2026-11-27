@@ -1,14 +1,15 @@
 import bcrypt from 'bcryptjs';
 import { ObjectId } from 'mongodb';
 import { getDatabase } from '../config/db.js';
+import { config } from '../config/env.js';
 import { createUser,findUserByEmail,findUserById,publicUser } from '../models/User.js';
 import { fail,ok } from '../utils/responseHandler.js';
 
 function sessionLogin(req,userId){return new Promise((resolve,reject)=>req.session.regenerate(error=>{if(error)return reject(error);req.session.userId=String(userId);req.session.save(error=>error?reject(error):resolve());}));}
-async function seedOrClaimBusinessData(user){
-  const db=getDatabase(),userId=String(user._id),invoice=db.collection('invoices'),tasks=db.collection('tasks');
+export async function seedOrClaimBusinessData(user,{db=getDatabase(),claim=config.claimLegacyData}={}){
+  const userId=String(user._id),invoice=db.collection('invoices'),tasks=db.collection('tasks');
   if(!(await invoice.countDocuments({userId}))){
-    const legacy=await invoice.find({userId:{$exists:false}}).toArray();
+    const legacy=claim?await invoice.find({userId:{$exists:false}}).toArray():[];
     if(legacy.length){await invoice.updateMany({userId:{$exists:false}},{$set:{userId}});await db.collection('counters').updateOne({_id:'invoice'},{$max:{seq:Math.max(...legacy.map(x=>Number(x.id)||0))}},{upsert:true});}
     else {
       const samples=[
@@ -24,7 +25,7 @@ async function seedOrClaimBusinessData(user){
     }
   }
   if(!(await tasks.countDocuments({userId}))){
-    const legacy=await tasks.find({userId:{$exists:false}}).toArray();
+    const legacy=claim?await tasks.find({userId:{$exists:false}}).toArray():[];
     if(legacy.length){await tasks.updateMany({userId:{$exists:false}},{$set:{userId}});await db.collection('counters').updateOne({_id:'task'},{$max:{seq:Math.max(...legacy.map(x=>Number(x.id)||0))}},{upsert:true});}
     else {await tasks.insertMany([{id:1,userId,title:'Prepare GSTR-1 summary',due:'2026-12-11',kind:'GSTR-1',done:0},{id:2,userId,title:'Review GSTR-3B estimate',due:'2026-12-20',kind:'GSTR-3B',done:0},{id:3,userId,title:'Reconcile purchase invoices',due:'2026-11-27',kind:'Reconciliation',done:0}]);await db.collection('counters').updateOne({_id:'task'},{$max:{seq:3}},{upsert:true});}
   }

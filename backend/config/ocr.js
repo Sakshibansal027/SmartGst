@@ -7,6 +7,20 @@ import { config } from './env.js';
 export const PROVIDER = 'Google Gemini Vision API';
 const MAX_INLINE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
+// The declared Content-Type is a claim by the browser; these are the bytes
+// themselves. Checking both refuses a renamed executable labelled image/png,
+// while still accepting a correctly-formed image the browser mislabelled.
+const MAGIC = [
+  ['image/jpeg', bytes => bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff],
+  ['image/png', bytes => bytes.length > 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a],
+  ['image/webp', bytes => bytes.length > 12 && bytes.subarray(0, 4).toString('latin1') === 'RIFF' && bytes.subarray(8, 12).toString('latin1') === 'WEBP'],
+  ['application/pdf', bytes => bytes.length > 5 && bytes.subarray(0, 5).toString('latin1') === '%PDF-']
+];
+export function detectMime(bytes) {
+  if (!bytes?.length) return '';
+  for (const [type, matches] of MAGIC) if (matches(bytes)) return type;
+  return '';
+}
 const GSTIN_RE = /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 
 const STATE_NAMES={'01':'Jammu & Kashmir','02':'Himachal Pradesh','03':'Punjab','04':'Chandigarh','05':'Uttarakhand','06':'Haryana','07':'Delhi','08':'Rajasthan','09':'Uttar Pradesh','10':'Bihar','11':'Sikkim','12':'Arunachal Pradesh','13':'Nagaland','14':'Manipur','15':'Mizoram','16':'Tripura','17':'Meghalaya','18':'Assam','19':'West Bengal','20':'Jharkhand','21':'Odisha','22':'Chhattisgarh','23':'Madhya Pradesh','24':'Gujarat','26':'Dadra & Nagar Haveli and Daman & Diu','27':'Maharashtra','29':'Karnataka','30':'Goa','31':'Lakshadweep','32':'Kerala','33':'Tamil Nadu','34':'Puducherry','35':'Andaman & Nicobar Islands','36':'Telangana','37':'Andhra Pradesh','38':'Ladakh','97':'Other Territory'};
@@ -91,8 +105,10 @@ export async function recognizeReceipt(file,{generate=defaultGenerate,apiKey=con
   if(!ALLOWED_MIME.has(file.mimetype))throw ocrError('Upload a JPG, PNG, WEBP image or PDF.',400);
   const bytes=await fs.readFile(file.path);
   if(bytes.length>MAX_INLINE_BYTES)throw ocrError('File is too large. Maximum size is 10 MB.',413);
+  const mimeType=detectMime(bytes);
+  if(!mimeType)throw ocrError('That file is not a genuine JPG, PNG, WEBP image or PDF. Its contents do not match its extension.',400);
   let text='';
-  try{text=await generate({apiKey,model,apiVersion,mimeType:file.mimetype,data:bytes.toString('base64'),prompt:PROMPT});}
+  try{text=await generate({apiKey,model,apiVersion,mimeType,data:bytes.toString('base64'),prompt:PROMPT});}
   catch(error){throw mapProviderError(error);}
   const parsed=parseModelJson(text),fields=normalizeFields(parsed??extractReceiptFields(text));
   return{text,fields,engine:`${PROVIDER} (${model})`,provider:'gemini',model,fallback:!parsed};
