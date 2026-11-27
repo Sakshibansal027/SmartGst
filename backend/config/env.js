@@ -18,5 +18,6 @@ export const config = {
   geminiApiKey: process.env.GEMINI_API_KEY || '',
   geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
   geminiApiVersion: process.env.GEMINI_API_VERSION || 'v1beta',
-  isProduction: process.env.NODE_ENV === 'production'
+  isProduction: process.env.NODE_ENV === 'production',
+  claimLegacyData: process.env.CLAIM_LEGACY_DATA === 'true'
 };

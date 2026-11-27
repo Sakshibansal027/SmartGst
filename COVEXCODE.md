@@ -52,3 +52,28 @@
   `backend/tests/ocrGemini.test.js` runs with no key and no network.
 - Tests are `node --test` over `backend/tests/*.test.js` and cover pure functions plus the
   upload contract — no test needs a running MongoDB.
+- **Tax arithmetic is integer paise, and `cgst + sgst === gst` must always hold.**
+  `calculateTax` rounds to paise first and gives the odd paise to SGST. Rounding each
+  half independently produced invoices whose CGST+SGST did not equal their GST and
+  GSTR-1 summaries that disagreed with their own detail rows. The sweep in
+  `backend/tests/businessLogic.test.js` asserts the invariant on paise, not on floats.
+- **Rate limiting is in-memory and therefore per-process** (`backend/middleware/rateLimit.js`).
+  A second API instance keeps its own counters and doubles the effective limit; a
+  multi-instance deployment needs shared storage. `/api/ocr` deliberately uses the
+  sliding strategy because Gemini's free-tier limit is a rolling 5 per minute — a fixed
+  window lets a boundary burst through.
+- **Upload type is decided by magic bytes, not the declared `Content-Type`.** `detectMime`
+  in `config/ocr.js` runs on the file bytes after `fs.readFile` and its result is what
+  gets sent to Gemini. Fixtures in `ocrGemini.test.js` must therefore carry real
+  headers; plain fake strings are rejected before the provider is ever called.
+- **`edit_file` anchors spanning more than one line fail in this repo.** The working tree
+  is CRLF for files written by earlier tools and LF for files written by `write_file`,
+  so a multi-line `old_string` copied from `read_file` does not match. Use single-line
+  anchors, or batch single-line edits, and verify with `git diff` afterwards.
+- **Dates are stored as bare `YYYY-MM-DD`, never as a timestamp.** Every financial-year
+  filter is a plain string comparison against `'YYYY-04-01'`, so a stored ISO timestamp
+  does not throw — it silently drops the record out of the dashboard, the returns
+  summary and the reports while leaving it in the invoice list. `isIsoDate`/`toDateOnly`
+  in `backend/utils/validators.js` accept a timestamp on the way in and store only the
+  date; `refresh()` in `frontend/src/App.jsx` strips the time on the way out, and
+  `fmtDate` slices before appending `'T00:00:00'`, which otherwise yields `Invalid Date`.

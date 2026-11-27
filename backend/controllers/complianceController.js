@@ -1,7 +1,9 @@
 import { getDatabase } from '../config/db.js';
 import { nextTaskId } from '../models/ComplianceTask.js';
+import { isIsoDate } from '../utils/validators.js';
+import { toDateOnly } from '../utils/validators.js';
 import { fail,ok } from '../utils/responseHandler.js';
 export async function listTasks(req,res,next){try{return ok(res,await getDatabase().collection('tasks').find({userId:String(req.user._id)}).sort({due:1,id:1}).toArray());}catch(e){next(e);}}
-export async function addTask(req,res,next){try{const title=String(req.body?.title||'').trim(),due=String(req.body?.due||'');if(!title||!/\d{4}-\d{2}-\d{2}/.test(due))return fail(res,400,'Reminder title and a valid due date are required.');const task={id:await nextTaskId(),userId:String(req.user._id),title,due,kind:req.body.kind||'Custom reminder',done:0};await getDatabase().collection('tasks').insertOne(task);return ok(res,task,201);}catch(e){next(e);}}
+export async function addTask(req,res,next){try{const title=String(req.body?.title||'').trim(),raw=req.body?.due;if(!title||!isIsoDate(raw))return fail(res,400,'Reminder title and a valid due date are required.');const due=toDateOnly(raw),task={id:await nextTaskId(),userId:String(req.user._id),title,due,kind:req.body.kind||'Custom reminder',done:0};await getDatabase().collection('tasks').insertOne(task);return ok(res,task,201);}catch(e){next(e);}}
 export async function toggleTask(req,res,next){try{const id=Number(req.params.id),collection=getDatabase().collection('tasks'),task=await collection.findOne({id,userId:String(req.user._id)});if(!task)return fail(res,404,'Reminder not found.');await collection.updateOne({id,userId:String(req.user._id)},{$set:{done:task.done?0:1}});return ok(res,{...task,done:task.done?0:1});}catch(e){next(e);}}
 export async function deleteTask(req,res,next){try{const result=await getDatabase().collection('tasks').deleteOne({id:Number(req.params.id),userId:String(req.user._id)});return result.deletedCount?ok(res,{ok:true}):fail(res,404,'Reminder not found.');}catch(e){next(e);}}
